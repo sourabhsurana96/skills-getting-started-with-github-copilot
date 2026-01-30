@@ -13,6 +13,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // Clear loading message
       activitiesList.innerHTML = "";
 
+      // Reset activity select options to avoid duplicates
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
+
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
         const activityCard = document.createElement("div");
@@ -57,14 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 const res = await fetch(`/activities/${encodeURIComponent(name)}/participants?email=${encodeURIComponent(email)}`, { method: 'DELETE' });
                 const data = await res.json();
                 if (res.ok) {
-                  li.remove();
-
-                  // Update availability
-                  const spotsEl = activityCard.querySelector('.spots-left');
-                  if (spotsEl) {
-                    const current = parseInt(spotsEl.textContent, 10);
-                    spotsEl.textContent = Math.max(0, current + 1);
-                  }
+                  // Refresh activities to reflect server state
+                  await fetchActivities();
 
                   messageDiv.textContent = data.message || 'Participant removed';
                   messageDiv.className = 'success';
@@ -107,6 +104,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         activityCard.appendChild(participantsSection);
 
+        // Tag card so we can find it later if needed
+        activityCard.dataset.activityName = name;
+
         activitiesList.appendChild(activityCard);
 
         // Add option to select dropdown
@@ -142,6 +142,9 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+
+        // Refresh activities so the new participant appears immediately
+        await fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
